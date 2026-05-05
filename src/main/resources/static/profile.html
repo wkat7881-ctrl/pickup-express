@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Pick up! - 用户主页</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .header { background-color: #007bff; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 1.5em; }
+        .btn-back { background-color: #ffc107; color: #333; border: none; border-radius: 20px; padding: 8px 18px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 0.9em; box-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+        
+        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); position: relative;}
+        .card.booked { background-color: #f8f9fa; opacity: 0.7; border: 1px dashed #ced4da; }
+        
+        .route-title { font-size: 1.3em; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .price { color: #007bff; font-weight: bold; font-size: 1.2em; float: right; }
+        
+        /* 个人资料区 */
+        .profile-header { display: flex; align-items: flex-start; gap: 20px; }
+        .profile-avatar { width: 85px; height: 85px; border-radius: 50%; background: #eee; border: 3px solid #007bff; }
+        .profile-info-box { flex: 1; }
+        
+        /* ✨ Kleinanzeigen 同款紫色评价标签 */
+        .kz-tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .kz-tag { background-color: #5b2c6f; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; display: flex; align-items: center; gap: 4px; }
+        .kz-tag.light { background-color: #e8daef; color: #5b2c6f; }
+
+        /* 编辑按钮 */
+        .btn-edit-profile { position: absolute; top: 20px; right: 20px; background: transparent; border: 1px solid #007bff; color: #007bff; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.85em; transition: 0.2s;}
+        .btn-edit-profile:hover { background: #007bff; color: white; }
+
+        .btn-action { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em; }
+        .btn-booked { background-color: #ffc107; color: #333; }
+        .btn-reopen { background-color: #28a745; color: white; }
+
+        /* 编辑资料的弹窗 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 400px; border-radius: 12px; padding: 25px; }
+        .modal-content input, .modal-content textarea { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+        .modal-content button { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; width: 48%; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 id="page-title">🏠 用户主页</h1>
+        <a href="/index.html" class="btn-back">⬅ 返回大厅</a>
+    </div>
+
+    <!-- 资料卡片 -->
+    <div class="container">
+        <div class="card profile-header" id="profile-card">
+            <p style="color: #888;">正在加载信息...</p>
+        </div>
+    </div>
+
+    <!-- 历史帖子 -->
+    <div class="container">
+        <h3 style="color: #333; border-left: 4px solid #007bff; padding-left: 10px;" id="list-title">📝 历史发布</h3>
+        <div id="posts-container"></div>
+    </div>
+
+    <!-- ✨ 编辑资料的专属弹窗 -->
+    <div id="editProfileModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:#007bff;">✏️ 编辑个人资料</h3>
+            <label style="font-size:0.9em; font-weight:bold; color:#555;">你的昵称</label>
+            <input type="text" id="editUsername" placeholder="比如: Emma">
+            
+            <label style="font-size:0.9em; font-weight:bold; color:#555;">个人简介 (Bio)</label>
+            <textarea id="editBio" rows="3" placeholder="写点什么介绍一下自己..."></textarea>
+            
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                <button onclick="closeEditModal()" style="background:#e9ecef; color:#333;">取消</button>
+                <button onclick="saveProfile()" style="background:#007bff; color:white;">保存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loggedInUserId = parseInt(localStorage.getItem('currentUserId')) || 1;
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUserId = parseInt(urlParams.get('userId')) || loggedInUserId;
+        const isMyProfile = (loggedInUserId === targetUserId);
+
+        if (isMyProfile) {
+            document.getElementById('page-title').innerText = "🏠 我的主页";
+            document.getElementById('list-title').innerText = "📝 我发布的任务";
+        } else {
+            document.getElementById('page-title').innerText = "👤 TA的主页";
+            document.getElementById('list-title').innerText = "📝 TA的历史发布";
+        }
+
+        function loadProfile() {
+            fetch('/api/users/' + targetUserId)
+                .then(r => r.json())
+                .then(user => {
+                    let editBtnHtml = isMyProfile ? `<button class="btn-edit-profile" onclick="openEditModal('${user.username}', '${user.bio || ''}')">✏️ 编辑资料</button>` : '';
+
+                    document.getElementById('profile-card').innerHTML = `
+                        <img src="${user.avatarUrl}" class="profile-avatar">
+                        <div class="profile-info-box">
+                            <h2 style="margin: 0 0 5px 0; color: #333;">${user.username}</h2>
+                            <p style="margin: 0 0 10px 0; color: #888; font-style: italic; font-size: 0.9em;">"${user.bio || '这个人很懒，还没写简介~'}"</p>
+                            
+                            <!-- ✨ 德国本地化紫标 -->
+                            <div class="kz-tags">
+                                <span class="kz-tag">😊 TOP Zufriedenheit</span>
+                                <span class="kz-tag">💬 Freundlich</span>
+                                <span class="kz-tag light">👍 Zuverlässig</span>
+                            </div>
+                        </div>
+                        ${editBtnHtml}
+                    `;
+                });
+        }
+
+        function loadPosts() {
+            fetch(`/api/users/${targetUserId}/posts`)
+                .then(r => r.json())
+                .then(posts => {
+                    const container = document.getElementById('posts-container');
+                    container.innerHTML = ''; 
+                    if(posts.length === 0) {
+                        container.innerHTML = '<p style="color:#888; text-align:center; padding:20px;">暂无历史记录。</p>';
+                        return;
+                    }
+
+                    posts.forEach(post => {
+                        const isAvail = post.status === 'AVAILABLE';
+                        const card = document.createElement('div');
+                        card.className = isAvail ? 'card' : 'card booked';
+                        
+                        let actionButtons = '';
+                        if (isMyProfile) {
+                            actionButtons = isAvail ? 
+                                `<button class="btn-action btn-booked" onclick="updatePostStatus(${post.id}, 'BOOKED')">✅ 标记为已预订</button>` : 
+                                `<button class="btn-action btn-reopen" onclick="updatePostStatus(${post.id}, 'AVAILABLE')">🔄 重新开放</button>`;
+                        }
+
+                        card.innerHTML = `
+                            <div class="price">€${post.price}</div>
+                            <div class="route-title">✈️ ${post.departure} ➔ ${post.destination}</div>
+                            <div style="color: #666; margin-top: 10px; font-size: 0.9em;">📦 物品: ${post.category}</div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: bold; color: ${isAvail ? '#28a745' : '#6c757d'};">状态: ${post.status}</span>
+                                <div>${actionButtons}</div>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                });
+        }
+
+        function updatePostStatus(postId, newStatus) {
+            fetch('/api/posts/' + postId, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus })
+            }).then(() => loadPosts());
+        }
+
+        function openEditModal(currentName, currentBio) {
+            document.getElementById('editUsername').value = currentName;
+            document.getElementById('editBio').value = currentBio;
+            document.getElementById('editProfileModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editProfileModal').style.display = 'none';
+        }
+
+        function saveProfile() {
+            const newUsername = document.getElementById('editUsername').value;
+            const newBio = document.getElementById('editBio').value;
+
+            fetch('/api/users/' + loggedInUserId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: newUsername, bio: newBio })
+            }).then(() => {
+                closeEditModal();
+                loadProfile(); 
+            });
+        }
+
+        loadProfile();
+        loadPosts();
+    </script>
+</body>
+</html>

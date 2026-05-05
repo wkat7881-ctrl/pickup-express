@@ -1,0 +1,26 @@
+# --- 你的心血结界 ---
+
+# 忽略 Java 编译产物
+target/
+*.class
+
+# 忽略本地数据库 (非常重要！)
+data/
+*.db
+*.log
+
+# 忽略 Eclipse 特有文件
+.settings/
+.project
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
+
+# 忽略 Mac 系统垃圾
+.DS_Store
+
+# 忽略 Maven 包装器
+.mvn/
+mvnw
+mvnw.cmd

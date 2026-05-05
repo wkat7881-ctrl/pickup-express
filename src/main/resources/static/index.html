@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Pick up! 德国帮带</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .header { background-color: #007bff; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 1.5em; }
+        .header-controls { display: flex; gap: 15px; align-items: center; }
+        .header select { padding: 5px; border-radius: 5px; border: none; font-weight: bold; outline: none; }
+        .btn-inbox { margin: 0; background-color: #ffc107; color: #333; border-radius: 20px; padding: 8px 18px; font-size: 0.9em; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: none; cursor: pointer; font-weight: bold;}
+        .account-switcher { background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 15px; font-size: 0.9em; }
+
+        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .card.booked { background-color: #f8f9fa; opacity: 0.65; border: 1px dashed #ced4da; }
+        
+        .role-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; color: white; }
+        .role-need { background-color: #dc3545; } 
+        .role-provide { background-color: #28a745; } 
+
+        .route-title { font-size: 1.3em; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .price { color: #007bff; font-size: 1.5em; font-weight: bold; float: right; }
+        
+        input, select, textarea { padding: 10px; margin: 5px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+        .half-width { width: calc(50% - 14px); }
+        .full-width { width: calc(100% - 10px); }
+        .btn-submit { padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: calc(100% - 14px); margin: 5px; font-size: 1.1em;}
+        
+        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-bar input { width: 100%; margin: 0; }
+        .search-bar button { width: 100px; margin: 0; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;}
+        
+        .avatar-img { width: 45px; height: 45px; border-radius: 50%; background: #eee; margin-right: 12px; cursor: pointer; border: 2px solid transparent; transition: border 0.2s;}
+        .avatar-img:hover { border: 2px solid #007bff; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 12px; padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 data-i18n="title">🌐 Pick up! 德国帮带</h1>
+        <div class="header-controls">
+            <!-- 语言切换器回归 -->
+            <select id="langSwitcher" onchange="changeLanguage(this.value)">
+                <option value="zh">🇨🇳 中文</option>
+                <option value="en">🇬🇧 English</option>
+                <option value="de">🇩🇪 Deutsch</option>
+            </select>
+
+            <div class="account-switcher">
+                👤 <select id="globalUserSwitcher" onchange="switchGlobalUser(this.value)">
+                    <option value="1">Qing</option>
+                    <option value="2">Max</option>
+                </select>
+            </div>
+            <button class="btn-inbox" onclick="window.location.href='/messages.html'" data-i18n="myInbox">🔔 我的消息</button>
+        </div>
+    </div>
+
+    <!-- 发帖区 -->
+    <div class="container">
+        <div class="card" style="background-color: #e9f5ff; border: 2px dashed #007bff;">
+            <h3 style="margin-top: 0; color: #007bff;" data-i18n="postTitle">➕ 发布任务/运力</h3>
+            <select id="role" class="full-width">
+                <option value="NEED_HELP" data-i18n="roleNeed">🙋 我需要人帮忙带东西 (找运力)</option>
+                <option value="PROVIDE_HELP" data-i18n="roleProvide">✈️ 我可以帮忙带东西 (提供运力)</option>
+            </select>
+            <input type="text" id="departure" class="half-width" data-i18n-ph="depPh" placeholder="出发地 (如: Augsburg)">
+            <input type="text" id="destination" class="half-width" data-i18n-ph="destPh" placeholder="目的地 (如: Shanghai)">
+            <input type="date" id="travelDate" class="half-width" title="截止日期 / 飞行日期">
+            <input type="number" id="price" class="half-width" data-i18n-ph="pricePh" placeholder="金额 (€)">
+            <input type="text" id="category" class="half-width" data-i18n-ph="catPh" placeholder="物品类别 (如: 文件)">
+            <input type="text" id="description" class="full-width" data-i18n-ph="descPh" placeholder="详细描述...">
+            <button class="btn-submit" onclick="submitPost()" data-i18n="submitBtn">🚀 确认发布</button>
+        </div>
+    </div>
+
+    <div class="container search-bar">
+        <input type="text" id="searchInput" data-i18n-ph="searchPh" placeholder="🔍 搜索城市...">
+        <button onclick="searchPosts()" data-i18n="searchBtn">搜索</button>
+        <button onclick="clearSearch()" style="background-color: #6c757d;" data-i18n="resetBtn">重置</button>
+    </div>
+
+    <div class="container" id="feed-container"></div>
+
+    <!-- 私信弹窗 -->
+    <div id="msgModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="msgTitle" style="margin-top:0;" data-i18n="sendMsgTitle">发送私信</h3>
+            <textarea id="msgContent" rows="4" class="full-width" placeholder="..."></textarea>
+            <input type="hidden" id="msgReceiverId">
+            <input type="hidden" id="msgPostId">
+            <div style="display:flex; justify-content:space-between; margin-top:15px;">
+                <button onclick="closeModal('msgModal')" style="background:#6c757d; color:white; border:none; padding:10px; border-radius:5px; width:48%;" data-i18n="cancelBtn">取消</button>
+                <button onclick="confirmSendMessage()" style="background:#28a745; color:white; border:none; padding:10px; border-radius:5px; width:48%;" data-i18n="sendBtn">发送 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 国际化字典
+        const dict = {
+            zh: {
+                title: "🌐 Pick up! 德国帮带", myInbox: "🔔 我的消息", postTitle: "➕ 发布任务/运力",
+                roleNeed: "🙋 我需要人帮忙带东西", roleProvide: "✈️ 我可以帮忙带东西",
+                depPh: "出发地 (如: Augsburg)", destPh: "目的地 (如: Shanghai)", pricePh: "金额 (€)", catPh: "物品类别 (如: 文件)", descPh: "详细描述...",
+                submitBtn: "🚀 确认发布", searchPh: "🔍 搜索城市...", searchBtn: "搜索", resetBtn: "重置",
+                sendMsgTitle: "发送私信", cancelBtn: "取消", sendBtn: "发送 🚀",
+                badgeNeed: "求帮忙", badgeProvide: "可帮忙", btnMsg: "💬 站内私信 TA", statusBooked: "🔒 已预订", dateLabel: "日期"
+            },
+            en: {
+                title: "🌐 Pick up! Express", myInbox: "🔔 Inbox", postTitle: "➕ Post Request/Offer",
+                roleNeed: "🙋 I need someone to carry", roleProvide: "✈️ I can help carry",
+                depPh: "From (e.g. Augsburg)", destPh: "To (e.g. Shanghai)", pricePh: "Price (€)", catPh: "Category (e.g. Docs)", descPh: "Details...",
+                submitBtn: "🚀 Publish", searchPh: "🔍 Search city...", searchBtn: "Search", resetBtn: "Reset",
+                sendMsgTitle: "Send Message", cancelBtn: "Cancel", sendBtn: "Send 🚀",
+                badgeNeed: "Request", badgeProvide: "Offer", btnMsg: "💬 Message", statusBooked: "🔒 Booked", dateLabel: "Date"
+            },
+            de: {
+                title: "🌐 Pick up! Mitbringen", myInbox: "🔔 Posteingang", postTitle: "➕ Anfrage/Angebot erstellen",
+                roleNeed: "🙋 Ich brauche Hilfe", roleProvide: "✈️ Ich biete Platz an",
+                depPh: "Von (z.B. Augsburg)", destPh: "Nach (z.B. Shanghai)", pricePh: "Preis (€)", catPh: "Kategorie (z.B. Dokumente)", descPh: "Details...",
+                submitBtn: "🚀 Veröffentlichen", searchPh: "🔍 Stadt suchen...", searchBtn: "Suchen", resetBtn: "Zurücksetzen",
+                sendMsgTitle: "Nachricht senden", cancelBtn: "Abbrechen", sendBtn: "Senden 🚀",
+                badgeNeed: "Suche", badgeProvide: "Biete", btnMsg: "💬 Nachricht", statusBooked: "🔒 Gebucht", dateLabel: "Datum"
+            }
+        };
+
+        let currentLang = 'zh';
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[lang][key]) el.innerText = dict[lang][key];
+            });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+                const key = el.getAttribute('data-i18n-ph');
+                if (dict[lang][key]) el.placeholder = dict[lang][key];
+            });
+            loadPosts(); 
+        }
+
+        let currentUserId = parseInt(localStorage.getItem('currentUserId')) || 1;
+        document.getElementById('globalUserSwitcher').value = currentUserId;
+
+        function switchGlobalUser(id) {
+            currentUserId = parseInt(id);
+            localStorage.setItem('currentUserId', currentUserId);
+            alert("已切换账号！");
+        }
+
+        function loadPosts(keyword = '') {
+            let url = '/api/posts' + (keyword ? '?keyword=' + encodeURIComponent(keyword) : '');
+            fetch(url).then(r => r.json()).then(data => {
+                const container = document.getElementById('feed-container');
+                container.innerHTML = '';
+                
+                data.reverse().forEach(post => {
+                    const isAvail = post.status === 'AVAILABLE';
+                    const isNeed = post.role === 'NEED_HELP';
+                    const badgeClass = isNeed ? 'role-need' : 'role-provide';
+                    const badgeText = isNeed ? dict[currentLang].badgeNeed : dict[currentLang].badgeProvide;
+                    
+                    const card = document.createElement('div');
+                    card.className = isAvail ? 'card' : 'card booked';
+                    
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                <img src="${post.user.avatarUrl}" class="avatar-img" onclick="window.location.href='/profile.html?userId=${post.user.id}'" title="查看主页">
+                                <div>
+                                    <div style="font-weight: bold; font-size: 1.1em; color: #333; cursor:pointer;" onclick="window.location.href='/profile.html?userId=${post.user.id}'">${post.user.username}</div>
+                                    <div style="font-size: 0.8em; color: #888;">${new Date(post.createdAt).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            <div class="price">€${post.price}</div>
+                        </div>
+                        <div class="role-badge ${badgeClass}">${badgeText}</div>
+                        <div class="route-title">✈️ ${post.departure} ➔ ${post.destination}</div>
+                        <div style="font-size: 0.9em; color: #555; margin-bottom: 8px;">
+                            📅 <b>${dict[currentLang].dateLabel}:</b> ${post.travelDate || '未指定'} &nbsp;&nbsp; 📦 <b>类别:</b> ${post.category}
+                        </div>
+                        <div style="color: #666; line-height: 1.5; background: #f9f9f9; padding: 10px; border-radius: 6px;">${post.description}</div>
+                        
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                            ${isAvail ? 
+                                `<button onclick="openMsgModal(${post.user.id}, ${post.id})" style="border:none; border-radius:5px; cursor:pointer; font-weight:bold; width:auto; margin:0; padding:8px 15px; background-color:#28a745; color:white; font-size:0.9em;">
+                                    ${dict[currentLang].btnMsg}
+                                </button>` : 
+                                `<span style="padding:8px 15px; background-color:#e9ecef; color:#6c757d; border-radius:5px; font-weight:bold; font-size:0.9em;">${dict[currentLang].statusBooked}</span>`
+                            }
+                            <span style="font-weight: bold; color: ${isAvail ? '#28a745' : '#6c757d'};">${post.status}</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            });
+        }
+
+        function submitPost() {
+            const newPost = {
+                role: document.getElementById('role').value,
+                departure: document.getElementById('departure').value,
+                destination: document.getElementById('destination').value,
+                travelDate: document.getElementById('travelDate').value,
+                price: document.getElementById('price').value,
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value || '...',
+                user: { id: currentUserId } 
+            };
+            fetch('/api/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newPost) })
+                .then(() => { 
+                    document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]').forEach(i => i.value = ''); 
+                    loadPosts(); 
+                });
+        }
+
+        function searchPosts() { loadPosts(document.getElementById('searchInput').value); }
+        function clearSearch() { document.getElementById('searchInput').value = ''; loadPosts(); }
+        
+        function openMsgModal(rId, pId) {
+            if (rId == currentUserId) { alert("不能给自己发私信哦！"); return; }
+            document.getElementById('msgReceiverId').value = rId; 
+            document.getElementById('msgPostId').value = pId;
+            document.getElementById('msgContent').value = ''; 
+            document.getElementById('msgModal').style.display = 'flex';
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function confirmSendMessage() {
+            fetch('/api/messages', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    senderId: currentUserId, 
+                    receiverId: document.getElementById('msgReceiverId').value, 
+                    postId: document.getElementById('msgPostId').value, 
+                    content: document.getElementById('msgContent').value 
+                })
+            }).then(() => { closeModal('msgModal'); alert('🎉 发送成功!'); });
+        }
+
+        changeLanguage('zh');
+    </script>
+</body>
+</html>
